@@ -1,0 +1,32 @@
+en:
+  label_sso_login_button: Sign in with SSO
+  label_or: or
+  label_sso_oidc_settings: OIDC / OAuth 2.0 (Community)
+  label_sso_enabled: Enable SSO login
+  text_sso_enabled_info: Shows the SSO button on the login page and enables the OIDC callback route.
+  label_sso_issuer_url: Issuer URL (server-side)
+  text_sso_issuer_url_info: OpenID Provider issuer URL reachable from the Redmine server (demo Docker uses http://demo-keycloak:8080/realms/your-realm).
+  label_sso_public_issuer_url: Public issuer URL (browser)
+  text_sso_public_issuer_url_info: Optional browser-facing issuer host (e.g. http://localhost:8190/realms/your-realm on demo stack). Used to rewrite authorization URLs for local Docker.
+  label_sso_client_id: Client ID
+  label_sso_client_secret: Client secret
+  text_sso_client_secret_info: Optional when using PKCE with a public client. Required for confidential clients.
+  label_sso_scopes: Scopes
+  label_sso_login_button_custom: Login button label
+  label_sso_auto_create_users: Auto-create users (JIT)
+  label_sso_enforce_non_admin: Enforce SSO for non-admin users
+  text_sso_enforce_info: Hides the password form for non-admin users. Admin local login always remains available (break-glass).
+  text_sso_enforced_hint: Standard users must sign in with SSO.
+  label_sso_admin_login: Administrator? Sign in with password
+  label_sso_claim_email: Email claim
+  label_sso_claim_login: Login claim
+  label_sso_claim_firstname: First name claim
+  label_sso_claim_lastname: Last name claim
+  label_sso_callback_url: OAuth redirect URI (register at IdP)
+  error_sso_not_configured: SSO is not configured. Contact your Redmine administrator.
+  error_sso_provider: "Identity provider error: %{message}"
+  error_sso_state_mismatch: SSO login failed (invalid state). Please try again.
+  error_sso_missing_code: SSO login failed (missing authorization code).
+  error_sso_inactive_user: Your SSO account is not active in Redmine.
+  error_sso_login_failed: "SSO login failed: %{message}"
+  error_sso_user_not_found: No matching Redmine user and JIT provisioning is disabled.

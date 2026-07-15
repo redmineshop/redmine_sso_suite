@@ -1,0 +1,68 @@
+<% if RedmineSsoSuite::Settings.configured? %>
+  <style>
+    .sso-login-section {
+      margin: 0 auto 2em;
+      width: 340px;
+      max-width: calc(100% - 40px);
+      padding: 0 20px 20px;
+      box-sizing: border-box;
+      text-align: center;
+    }
+
+    .sso-login-section .sso-login-divider {
+      margin: 0 0 12px;
+      color: #777;
+      font-size: 0.95em;
+    }
+
+    .sso-login-section .sso-login-hint {
+      margin: 0 0 8px;
+      color: #666;
+      font-size: 0.9em;
+    }
+
+    .sso-login-section .sso-login-button {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+    }
+
+    .sso-login-section #sso-admin-login-toggle {
+      font-size: 0.9em;
+    }
+  </style>
+
+  <div class="sso-login-section">
+    <% unless RedmineSsoSuite::Settings.enforce_sso_for_non_admin? %>
+      <p class="sso-login-divider"><%= l(:label_or) %></p>
+    <% end %>
+    <p>
+      <%= link_to RedmineSsoSuite::Settings.login_button_label,
+                  sso_login_path(back_url: params[:back_url]),
+                  class: 'button sso-login-button' %>
+    </p>
+    <% if RedmineSsoSuite::Settings.enforce_sso_for_non_admin? %>
+      <p class="sso-login-hint"><%= l(:text_sso_enforced_hint) %></p>
+      <p>
+        <a href="#" id="sso-admin-login-toggle"><%= l(:label_sso_admin_login) %></a>
+      </p>
+    <% end %>
+  </div>
+
+  <% if RedmineSsoSuite::Settings.enforce_sso_for_non_admin? %>
+    <style>#login-form { display: none; }</style>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        var toggle = document.getElementById('sso-admin-login-toggle');
+        var form = document.getElementById('login-form');
+        if (toggle && form) {
+          toggle.addEventListener('click', function (event) {
+            event.preventDefault();
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+          });
+        }
+      });
+    </script>
+  <% end %>
+<% end %>

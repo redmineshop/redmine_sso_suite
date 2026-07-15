@@ -1,0 +1,78 @@
+<fieldset class="box tabular">
+  <legend><%= l(:label_sso_oidc_settings) %></legend>
+
+  <p>
+    <%= label_tag 'settings[enabled]', l(:label_sso_enabled) %>
+    <%= check_box_tag 'settings[enabled]', '1', @settings['enabled'].to_s == '1' %>
+    <em class="info"><%= l(:text_sso_enabled_info) %></em>
+  </p>
+
+  <p>
+    <%= label_tag 'settings[issuer_url]', l(:label_sso_issuer_url) %>
+    <%= text_field_tag 'settings[issuer_url]', @settings['issuer_url'], size: 80, placeholder: 'http://demo-keycloak:8080/realms/redmineshop-dev' %>
+    <em class="info"><%= l(:text_sso_issuer_url_info) %></em>
+  </p>
+
+  <p>
+    <%= label_tag 'settings[public_issuer_url]', l(:label_sso_public_issuer_url) %>
+    <%= text_field_tag 'settings[public_issuer_url]', @settings['public_issuer_url'], size: 80, placeholder: 'http://localhost:8190/realms/redmineshop-dev' %>
+    <em class="info"><%= l(:text_sso_public_issuer_url_info) %></em>
+  </p>
+
+  <p>
+    <%= label_tag 'settings[client_id]', l(:label_sso_client_id) %>
+    <%= text_field_tag 'settings[client_id]', @settings['client_id'], size: 40 %>
+  </p>
+
+  <p>
+    <%= label_tag 'settings[client_secret]', l(:label_sso_client_secret) %>
+    <%= password_field_tag 'settings[client_secret]', @settings['client_secret'], size: 40, autocomplete: 'new-password' %>
+    <em class="info"><%= l(:text_sso_client_secret_info) %></em>
+  </p>
+
+  <p>
+    <%= label_tag 'settings[scopes]', l(:label_sso_scopes) %>
+    <%= text_field_tag 'settings[scopes]', @settings['scopes'], size: 60 %>
+  </p>
+
+  <p>
+    <%= label_tag 'settings[login_button_label]', l(:label_sso_login_button_custom) %>
+    <%= text_field_tag 'settings[login_button_label]', @settings['login_button_label'], size: 40 %>
+  </p>
+
+  <p>
+    <%= label_tag 'settings[auto_create_users]', l(:label_sso_auto_create_users) %>
+    <%= check_box_tag 'settings[auto_create_users]', '1', @settings['auto_create_users'].to_s != '0' %>
+  </p>
+
+  <p>
+    <%= label_tag 'settings[enforce_sso_for_non_admin]', l(:label_sso_enforce_non_admin) %>
+    <%= check_box_tag 'settings[enforce_sso_for_non_admin]', '1', @settings['enforce_sso_for_non_admin'].to_s == '1' %>
+    <em class="info"><%= l(:text_sso_enforce_info) %></em>
+  </p>
+
+  <p>
+    <%= label_tag 'settings[claim_email]', l(:label_sso_claim_email) %>
+    <%= text_field_tag 'settings[claim_email]', @settings['claim_email'], size: 30 %>
+  </p>
+
+  <p>
+    <%= label_tag 'settings[claim_login]', l(:label_sso_claim_login) %>
+    <%= text_field_tag 'settings[claim_login]', @settings['claim_login'], size: 30 %>
+  </p>
+
+  <p>
+    <%= label_tag 'settings[claim_firstname]', l(:label_sso_claim_firstname) %>
+    <%= text_field_tag 'settings[claim_firstname]', @settings['claim_firstname'], size: 30 %>
+  </p>
+
+  <p>
+    <%= label_tag 'settings[claim_lastname]', l(:label_sso_claim_lastname) %>
+    <%= text_field_tag 'settings[claim_lastname]', @settings['claim_lastname'], size: 30 %>
+  </p>
+
+  <p>
+    <strong><%= l(:label_sso_callback_url) %>:</strong>
+    <code><%= RedmineSsoSuite::Settings.callback_url %></code>
+  </p>
+</fieldset>
