@@ -11,6 +11,10 @@ Sprint 2.2 walking skeleton — OIDC login with Keycloak local dev stack.
 ### Fixed
 
 - SSO callback now uses Redmine `logged_user=` so `session[:tk]` is a valid session token (fixes "Your session has expired" after OIDC redirect)
+- **Security**: `back_url` param is now validated with Redmine's own `validate_back_url` before use, closing an open redirect (CWE-601) that let a crafted `/sso/login?back_url=...` link send an authenticated user off-site after login
+- **Security**: "Enforce SSO for non-admin users" is now enforced server-side (`AccountController` patch) — previously it only hid the password form via CSS/JS and could be bypassed with a direct POST to `/login`
+- **Security**: the `email` claim is only trusted to match an existing account when the IdP marks it `email_verified` (or omits the claim), preventing account takeover via an unverified/spoofed email claim
+- **Security**: ID token `iss`/`aud`/`exp` claims are now validated (accepts either the server-side or public/browser-facing issuer, since Keycloak issues tokens against whichever hostname the browser used)
 
 ### Added
 

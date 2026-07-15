@@ -54,6 +54,19 @@ class SsoControllerTest < ActionController::TestCase
     assert flash[:error].present?
   end
 
+  test 'login does not store an external back_url (open redirect protection)' do
+    get :login, params: { back_url: 'https://evil.example/phish' }
+
+    refute_equal 'https://evil.example/phish', session[:sso_back_url]
+    assert_equal '/my/page', session[:sso_back_url]
+  end
+
+  test 'login keeps a valid same-host relative back_url' do
+    get :login, params: { back_url: '/my/page' }
+
+    assert_equal '/my/page', session[:sso_back_url]
+  end
+
   test 'callback establishes valid redmine session token' do
     user = User.find(1)
     state = 'callback-state-token'

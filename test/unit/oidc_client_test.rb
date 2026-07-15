@@ -57,4 +57,85 @@ class RedmineSsoSuite::OidcClientTest < ActiveSupport::TestCase
     decoded = client.send(:decode_jwt_payload, jwt)
     assert_equal 'user@example.com', decoded['email']
   end
+
+  def test_claims_from_token_response_accepts_matching_iss_and_aud
+    client = RedmineSsoSuite::OidcClient.new
+    jwt = build_jwt(
+      'sub' => 'abc',
+      'email' => 'user@example.com',
+      'iss' => 'http://demo-keycloak:8080/realms/redmineshop-dev',
+      'aud' => 'redmine-oidc',
+      'exp' => 5.minutes.from_now.to_i
+    )
+
+    claims = client.claims_from_token_response('id_token' => jwt)
+    assert_equal 'user@example.com', claims['email']
+  end
+
+  def test_claims_from_token_response_rejects_issuer_mismatch
+    client = RedmineSsoSuite::OidcClient.new
+    jwt = build_jwt(
+      'sub' => 'abc',
+      'iss' => 'http://attacker-idp.example/realms/other',
+      'aud' => 'redmine-oidc',
+      'exp' => 5.minutes.from_now.to_i
+    )
+
+    assert_raises RedmineSsoSuite::OidcClient::TokenError do
+      client.claims_from_token_response('id_token' => jwt)
+    end
+  end
+
+  def test_claims_from_token_response_accepts_public_issuer_url
+    # Keycloak issues tokens with `iss` matching the browser-facing hostname
+    # (public_issuer_url), which differs from the server-side issuer_url used
+    # for discovery in the split-hostname Docker demo setup.
+    client = RedmineSsoSuite::OidcClient.new
+    jwt = build_jwt(
+      'sub' => 'abc',
+      'email' => 'user@example.com',
+      'iss' => 'http://localhost:8190/realms/redmineshop-dev',
+      'aud' => 'redmine-oidc',
+      'exp' => 5.minutes.from_now.to_i
+    )
+
+    claims = client.claims_from_token_response('id_token' => jwt)
+    assert_equal 'user@example.com', claims['email']
+  end
+
+  def test_claims_from_token_response_rejects_audience_mismatch
+    client = RedmineSsoSuite::OidcClient.new
+    jwt = build_jwt(
+      'sub' => 'abc',
+      'iss' => 'http://demo-keycloak:8080/realms/redmineshop-dev',
+      'aud' => 'some-other-client',
+      'exp' => 5.minutes.from_now.to_i
+    )
+
+    assert_raises RedmineSsoSuite::OidcClient::TokenError do
+      client.claims_from_token_response('id_token' => jwt)
+    end
+  end
+
+  def test_claims_from_token_response_rejects_expired_token
+    client = RedmineSsoSuite::OidcClient.new
+    jwt = build_jwt(
+      'sub' => 'abc',
+      'iss' => 'http://demo-keycloak:8080/realms/redmineshop-dev',
+      'aud' => 'redmine-oidc',
+      'exp' => 5.minutes.ago.to_i
+    )
+
+    assert_raises RedmineSsoSuite::OidcClient::TokenError do
+      client.claims_from_token_response('id_token' => jwt)
+    end
+  end
+
+  private
+
+  def build_jwt(payload)
+    header = Base64.urlsafe_encode64({ 'alg' => 'RS256' }.to_json, padding: false)
+    body = Base64.urlsafe_encode64(payload.to_json, padding: false)
+    "#{header}.#{body}.signature"
+  end
 end

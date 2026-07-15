@@ -33,10 +33,21 @@ module RedmineSsoSuite
 
       {
         mail: email.to_s.strip.downcase,
+        email_verified: email_verified?(data),
         login: sanitize_login(login),
         firstname: firstname.to_s.strip.presence || 'SSO',
         lastname: lastname.to_s.strip.presence || 'User'
       }
+    end
+
+    # Only trust the `email` claim for account matching/creation when the IdP
+    # explicitly marks it verified (or omits the claim entirely, e.g. userinfo
+    # endpoints that don't expose it). Without this check, an IdP that lets
+    # users self-declare an unverified email could be used to take over an
+    # existing Redmine account matching that email (CWE-290-style spoofing).
+    def email_verified?(data)
+      claim = data['email_verified']
+      claim.nil? || claim == true || claim.to_s == 'true'
     end
 
     def fetch_claim(data, key)
@@ -53,7 +64,7 @@ module RedmineSsoSuite
     end
 
     def find_existing_user(attrs)
-      if attrs[:mail].present?
+      if attrs[:mail].present? && attrs[:email_verified]
         user = User
                .joins(:email_addresses)
                .merge(EmailAddress.where(address: attrs[:mail]))

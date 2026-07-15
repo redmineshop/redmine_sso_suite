@@ -7,6 +7,7 @@ require_relative 'lib/redmine_sso_suite/settings'
 require_relative 'lib/redmine_sso_suite/oidc_client'
 require_relative 'lib/redmine_sso_suite/user_provisioner'
 require_relative 'lib/redmine_sso_suite/hooks'
+require_relative 'lib/redmine_sso_suite/account_controller_patch'
 require_relative 'lib/redmine_sso_suite/demo_env_config'
 
 Redmine::Plugin.register :redmine_sso_suite do
@@ -25,4 +26,15 @@ Rails.application.config.after_initialize do
   RedmineSsoSuite::DemoEnvConfig.apply_if_needed!
 rescue StandardError => e
   Rails.logger.warn("[redmine_sso_suite] Demo env configure skipped: #{e.message}")
+end
+
+# NOTE: Redmine's own PluginLoader already wraps `init.rb` loading inside a
+# `Rails.application.config.to_prepare` block (see lib/redmine/plugin_loader.rb).
+# Registering another nested `to_prepare` here would only run starting on the
+# *next* reload cycle — never on the very first boot in `test`/`production`
+# (cache_classes = true, no reload cycle ever happens). Prepending directly
+# at load time is safe: on first boot we're already inside the initial
+# prepare cycle, and on each dev reload this file is reloaded and re-run.
+unless AccountController.ancestors.include?(RedmineSsoSuite::AccountControllerPatch)
+  AccountController.prepend(RedmineSsoSuite::AccountControllerPatch)
 end

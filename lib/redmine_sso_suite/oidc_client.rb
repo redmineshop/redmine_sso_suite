@@ -73,7 +73,10 @@ module RedmineSsoSuite
     def claims_from_token_response(token_response)
       if token_response['id_token'].present?
         payload = decode_jwt_payload(token_response['id_token'])
-        return payload if payload.is_a?(Hash) && payload['sub'].present?
+        if payload.is_a?(Hash) && payload['sub'].present?
+          validate_id_token_claims!(payload)
+          return payload
+        end
       end
 
       access_token = token_response['access_token']
@@ -125,6 +128,41 @@ module RedmineSsoSuite
       return url if browser_issuer.blank? || server_issuer.blank? || browser_issuer == server_issuer
 
       url.to_s.sub(server_issuer, browser_issuer)
+    end
+
+    # Defense-in-depth claim checks (iss/aud/exp) on top of transport-level
+    # trust (the ID token is fetched server-to-server from the token endpoint
+    # over TLS, not received via the browser). Full signature/JWKS
+    # verification is intentionally out of scope for this alpha and should be
+    # added in a follow-up sprint.
+    def validate_id_token_claims!(payload)
+      actual_iss = payload['iss'].to_s.chomp('/')
+      if actual_iss.present? && !accepted_issuers.include?(actual_iss)
+        raise TokenError, "ID token issuer mismatch (expected one of #{accepted_issuers.join(', ')}, got #{actual_iss})"
+      end
+
+      audience = Array(payload['aud'])
+      if audience.present? && @settings.client_id.present? && !audience.include?(@settings.client_id)
+        raise TokenError, 'ID token audience does not match configured client_id'
+      end
+
+      exp = payload['exp']
+      if exp.present? && Time.now.to_i > exp.to_i
+        raise TokenError, 'ID token has expired'
+      end
+    end
+
+    # The IdP issues tokens with `iss` matching whichever hostname the
+    # *browser* used to reach it (e.g. Keycloak's request-based hostname
+    # resolution), which can legitimately differ from the server-side
+    # discovery hostname when `public_issuer_url` rewrites the browser-facing
+    # host (as in the local Docker demo stack: `demo-keycloak:8080` for the
+    # server vs `localhost:8190` for the browser). Accept either.
+    def accepted_issuers
+      [@settings.issuer_for_server, @settings.issuer_for_browser]
+        .map { |url| url.to_s.chomp('/') }
+        .reject(&:blank?)
+        .uniq
     end
 
     def decode_jwt_payload(jwt)

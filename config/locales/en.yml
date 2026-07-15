@@ -15,8 +15,9 @@ en:
   label_sso_login_button_custom: Login button label
   label_sso_auto_create_users: Auto-create users (JIT)
   label_sso_enforce_non_admin: Enforce SSO for non-admin users
-  text_sso_enforce_info: Hides the password form for non-admin users. Admin local login always remains available (break-glass).
+  text_sso_enforce_info: Hides the password form and blocks password login for non-admin accounts (enforced server-side). Admin local login always remains available (break-glass).
   text_sso_enforced_hint: Standard users must sign in with SSO.
+  error_sso_password_login_disabled: Password login is disabled for this account. Please sign in with SSO, or contact your administrator.
   label_sso_admin_login: Administrator? Sign in with password
   label_sso_claim_email: Email claim
   label_sso_claim_login: Login claim

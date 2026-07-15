@@ -47,6 +47,25 @@ class RedmineSsoSuite::UserProvisionerTest < ActiveSupport::TestCase
     assert_equal existing.id, user.id
   end
 
+  test 'does not link to existing account when email is unverified' do
+    existing = User.find_by(login: 'jsmith') || User.find(2)
+    provisioner = RedmineSsoSuite::UserProvisioner.new
+
+    # An IdP that returns email_verified: false must not let an attacker
+    # take over an existing Redmine account by claiming the same email.
+    # Failing closed (JIT creation collides on the already-taken email)
+    # is the safe outcome — silently logging the attacker in as jsmith
+    # would not be.
+    error = assert_raises RedmineSsoSuite::UserProvisioner::Error do
+      provisioner.find_or_create_from_claims(
+        'email' => existing.mail,
+        'email_verified' => false,
+        'preferred_username' => 'someone-else-unverified'
+      )
+    end
+    assert_match(/mail/i, error.message)
+  end
+
   test 'raises when jit disabled and user missing' do
     Setting.plugin_redmine_sso_suite = Setting.plugin_redmine_sso_suite.merge('auto_create_users' => '0')
     provisioner = RedmineSsoSuite::UserProvisioner.new

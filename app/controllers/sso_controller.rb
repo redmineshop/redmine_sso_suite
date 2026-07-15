@@ -13,7 +13,9 @@ class SsoController < ApplicationController
 
     session[:sso_oidc_state] = state
     session[:sso_oidc_code_verifier] = code_verifier
-    session[:sso_back_url] = params[:back_url].presence || my_page_path
+    # Reuse Redmine core's back_url validation (same-host, relative path only) to
+    # prevent an open redirect via a crafted `back_url` param (CWE-601).
+    session[:sso_back_url] = validate_back_url(params[:back_url].to_s) || my_page_path
 
     client = RedmineSsoSuite::OidcClient.new
     redirect_to client.authorization_url(state: state, code_verifier: code_verifier), allow_other_host: true
@@ -30,6 +32,8 @@ class SsoController < ApplicationController
     end
 
     unless secure_compare(session[:sso_oidc_state].to_s, params[:state].to_s)
+      logger.warn("[redmine_sso_suite] State mismatch: session_present=#{session[:sso_oidc_state].present?} " \
+                   "session_id=#{session.id.to_s.first(8)}")
       flash[:error] = I18n.t(:error_sso_state_mismatch)
       return redirect_to signin_path
     end
