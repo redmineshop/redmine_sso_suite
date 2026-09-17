@@ -1,14 +1,19 @@
 # Redmine SSO Suite — Free OpenID Connect (OIDC) Single Sign-On Plugin for Redmine
 
+[![Community · Free forever](https://img.shields.io/badge/Community-Free%20forever-brightgreen)](https://redmineshop.com/products/redmine-sso-suite)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+
+**Last maintained:** 2026-09-17
+
+**Source on GitHub:** [github.com/redmineshop/redmine_sso_suite](https://github.com/redmineshop/redmine_sso_suite)
+
 **Redmine SSO Suite** adds OpenID Connect / OAuth 2.0 single sign-on to self-hosted Redmine, so your team logs in with Keycloak, Okta, Azure Entra ID, Google Workspace, or any standards-compliant identity provider instead of a separate Redmine password.
 
-Community edition is **free forever** — built and maintained by [RedmineShop](https://redmineshop.com). Pro adds SAML 2.0, multi-IdP, group/role sync, and audit logging after the public trust gate.
-
-[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+Community edition is **free forever** — no license key, no phone-home, **no email to clone**. Built and maintained by [RedmineShop](https://redmineshop.com). Pro (SAML 2.0, multi-IdP, group/role sync, audit logging) is planned after the public trust gate; Community features never move behind a paywall.
 
 ## Why teams choose this Redmine OIDC plugin
 
-Stock Redmine authentication is username/password only. IT teams that must enforce corporate identity standards (SSO mandate, password rotation policy, offboarding via the IdP) are left bolting on plugins that vary widely in security quality and maintenance. Redmine SSO Suite is a focused, actively maintained OIDC implementation with authorization-code + PKCE, JIT provisioning, and — unlike many community SSO plugins — a real server-side enforcement mode and a documented security review (see [Security](#security) below).
+Stock Redmine authentication is username/password only. IT teams that must enforce corporate identity standards (SSO mandate, password rotation policy, offboarding via the IdP) are left bolting on plugins that vary widely in security quality and maintenance. Redmine SSO Suite is a focused, actively maintained OIDC implementation with authorization-code + PKCE, JIT provisioning, and — unlike many community SSO plugins — a real server-side enforcement mode (see [Security](#security) below).
 
 ## Features (Community — free forever)
 
@@ -37,44 +42,52 @@ Full history in [CHANGELOG.md](CHANGELOG.md). Found a security issue? Please rep
 
 ## Requirements
 
-- Redmine **6.x** (5.1.x compatibility planned for beta)
+- Redmine **6.x** (primary target); **5.1.x** targeted — see [compatibility](#compatibility)
 - Ruby 3.x (bundled with the official Redmine Docker image)
 - MySQL 8 or PostgreSQL
 - One OpenID Connect identity provider — Keycloak, Okta, Auth0, Azure Entra ID, Google Workspace, or any OIDC-compliant IdP
 
 ## Installation
 
-1. Copy or symlink this plugin into `plugins/redmine_sso_suite` in your Redmine install
-2. Restart Redmine (run `bundle install` first if your Gemfile.lock changed — this plugin has no extra gem dependencies)
-3. Go to **Administration → Plugins → Redmine SSO Suite** and configure the issuer URL, client ID, and client secret
-4. Register the redirect URI with your identity provider:
+**Estimated time: 10–15 minutes** (plus IdP client registration).
 
-   ```
-   https://your-redmine.example.com/sso/oauth/callback
-   ```
-
-### Local development (RedmineShop monorepo demo stack)
-
-Commercial/community plugins under active development live in `demo/plugins/`, not `backend/plugins/` (which is reserved for the redmineshop.com storefront CMS API):
+Clone into `plugins/redmine_sso_suite` in your Redmine install (folder name must match):
 
 ```bash
-cp demo/.env.demo.example demo/.env.demo
-docker compose -f docker-compose.demo.yml --env-file demo/.env.demo up -d --build
-./demo/scripts/configure-sso-dev.sh
+cd /path/to/redmine/plugins
+git clone https://github.com/redmineshop/redmine_sso_suite.git
+ls redmine_sso_suite/init.rb
 ```
 
-- Demo Redmine: http://localhost:8090
-- Keycloak (dev IdP): http://localhost:8190 (admin / admin)
-- Test user: `sso.test` / `sso-test-password`
+Do not rename the plugin directory. If you download a GitHub ZIP, rename the unpacked `redmine_sso_suite-main` folder to `redmine_sso_suite`.
 
-See [demo/docs/sso-keycloak.md](../../docs/sso-keycloak.md) for the full local Keycloak walkthrough.
+This plugin has **no extra gems** and **no database migrations**. Restart Redmine, then go to **Administration → Plugins → Redmine SSO Suite → Configure**.
+
+Register the redirect URI with your identity provider:
+
+```
+https://your-redmine.example.com/sso/oauth/callback
+```
+
+See the [install guide](https://redmineshop.com/docs/sso-install) for IdP-specific notes.
+
+## Configuration
+
+1. **Administration → Plugins → Redmine SSO Suite → Configure**
+2. Check **Enable SSO login**
+3. Set **Issuer URL (server-side)** to your IdP realm / tenant issuer (the URL that serves `/.well-known/openid-configuration`)
+4. Set **Client ID** and **Client secret** from the IdP
+5. Optional: **Public issuer URL** when browsers reach the IdP on a different host than Redmine (Docker / split DNS)
+6. Save. The login page shows **Sign in with SSO**.
+
+Administrators can always use the local password form (break-glass), even when **Enforce SSO for non-admin** is on.
 
 ## Settings reference
 
 | Setting | Description |
 | --- | --- |
-| Issuer URL (server-side) | OIDC issuer reachable from the Redmine server (Docker demo: `http://demo-keycloak:8080/realms/...`) |
-| Public issuer URL | Browser-facing issuer host, only needed when it differs from the server-side URL (Docker demo: `http://localhost:8190/realms/...`) |
+| Issuer URL (server-side) | OIDC issuer reachable from the Redmine server |
+| Public issuer URL | Browser-facing issuer host, only needed when it differs from the server-side URL |
 | Client ID / Client secret | OAuth 2.0 client credentials issued by your IdP |
 | Scopes | Space-separated OIDC scopes (default `openid profile email`) |
 | Login button label | Custom text for the "Sign in with SSO" button |
@@ -82,29 +95,58 @@ See [demo/docs/sso-keycloak.md](../../docs/sso-keycloak.md) for the full local K
 | Enforce SSO for non-admin | Hides the password form and blocks password login for non-admin accounts server-side; administrators always keep local password login (break-glass) |
 | Email / login / first name / last name claims | Map your IdP's claim names if they differ from the OIDC defaults |
 
+## Compatibility
+
+| Redmine | Ruby | Database | Status |
+|---------|------|----------|--------|
+| 6.x     | 3.2+ | MySQL 8 / PostgreSQL | Targeted — **untested** (no published QA matrix) |
+| 5.1.x   | 3.1+ | MySQL 8 / PostgreSQL | Targeted — **untested** |
+
+Do not treat catalog versions as tested cells. The demo quality harness is **one** Redmine image, not a 5.1 / 6.x matrix.
+
+## Screenshot
+
+Administration → Plugins → Configure (OIDC settings) on demo Redmine (plugin quality harness):
+
+![OIDC plugin settings](screenshots/plugin-settings.png)
+
+Login page SSO button and Keycloak authorization start: [screenshots/login-sso-button.png](screenshots/login-sso-button.png), [screenshots/keycloak-login.png](screenshots/keycloak-login.png). Plugin row: [screenshots/admin-plugins.png](screenshots/admin-plugins.png).
+
 ## Tests
 
-From the monorepo root, against the demo Docker stack:
+Unit + functional tests live under `test/` (MiniTest). Run them from a Redmine tree with this plugin in `plugins/redmine_sso_suite`:
 
 ```bash
-chmod +x demo/scripts/run-sso-plugin-tests.sh
-./demo/scripts/run-sso-plugin-tests.sh
+bundle exec rake redmine:plugins:test NAME=redmine_sso_suite RAILS_ENV=test
 ```
 
-Unit and functional tests cover the OIDC client (PKCE, discovery, token/claim validation), JIT user provisioning (including the `email_verified` guard), the OAuth callback (state validation, session establishment), and the server-side SSO enforcement patch.
+They cover the OIDC client (PKCE, discovery, token/claim validation), JIT provisioning (including the `email_verified` guard), the OAuth callback (state validation, session establishment), and the server-side SSO enforcement patch. Token exchange is **stubbed** — they do not require a live IdP.
 
-## Roadmap
+Public sibling CI (`.github/workflows/ci.yml`) is Ruby syntax only (`ruby -c`). That is not the quality bar.
 
-Community features never move behind a paywall. Planned **Pro** tier (post trust-gate):
+### Quality harness (demo + E2E)
 
-- SAML 2.0 support and multiple simultaneous identity providers
-- Group / role mapping from IdP claims
-- Login audit log with CSV export
-- Advanced admin diagnostics and per-IdP setup guides
+Verified on the RedmineShop **monorepo** demo stack (`docker-compose.demo.yml` + Keycloak). This public GitHub repo is the plugin only — it does not ship that compose file.
+
+| Bar | Status |
+| --- | --- |
+| Automated tests beyond `ruby -c` | **Verified** — `test/unit` + `test/functional` in this repo (Playwright is a separate row) |
+| Installed + enabled on demo Redmine | **Verified** — mounted via `demo/plugins/` on the monorepo demo stack; seed applies OIDC settings and waits for Keycloak discovery |
+| E2E primary happy path | **Verified** — Playwright `demo/e2e/tests/redmine_sso_suite.spec.js` (Configure page, key fields, login SSO button, redirect to Keycloak authorize URL). **Not verified:** full OIDC callback + JIT user creation in the browser |
+| UI screenshot in README | **Verified** — `screenshots/{admin-plugins,plugin-settings,login-sso-button,keycloak-login}.png` from that spec |
+| Redmine 5.1 / 6.x matrix | **Declared / untested** — this harness is one demo image, not a QA matrix |
+
+How to run (monorepo, not this public repo): [plugin quality harness](https://github.com/redmineshop/redmineshop/blob/main/docs/plugin-quality-harness.md).
+
+## Local Keycloak demo (RedmineShop monorepo only)
+
+This GitHub repository is **the plugin**. The Keycloak + Redmine demo stack lives in the [RedmineShop monorepo](https://github.com/redmineshop/redmineshop) (`docker-compose.demo.yml`, `demo/scripts/configure-sso-dev.sh`). It is not part of a `git clone` of this repo.
+
+On that monorepo, after the demo stack is up: demo Redmine `http://localhost:8090`, Keycloak `http://localhost:8190` (admin / admin), test user `sso.test` / `sso-test-password`. Walkthrough: [sso-keycloak.md](https://github.com/redmineshop/redmineshop/blob/main/demo/docs/sso-keycloak.md).
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE). Source is public; clone and self-build are always allowed under GPL. Signed official release packages with checksums ship via the RedmineShop email funnel at Community beta/GA.
+GPL-3.0 — see [LICENSE](LICENSE). Source is public; clone and self-build are always allowed under GPL. No email required to get Community. There is no signed email-funnel package for this plugin.
 
 ## Support & Links
 
