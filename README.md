@@ -4,13 +4,13 @@
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![CI](https://github.com/redmineshop/redmine_sso_suite/actions/workflows/ci.yml/badge.svg)](https://github.com/redmineshop/redmine_sso_suite/actions/workflows/ci.yml)
 
-**Last maintained:** 2026-09-18
+**Last maintained:** 2026-09-19
 
 **Source on GitHub:** [github.com/redmineshop/redmine_sso_suite](https://github.com/redmineshop/redmine_sso_suite)
 
 **Redmine SSO Suite** adds OpenID Connect / OAuth 2.0 single sign-on to self-hosted Redmine, so your team logs in with Keycloak, Okta, Azure Entra ID, Google Workspace, or any standards-compliant identity provider instead of a separate Redmine password.
 
-Community edition is **free forever** — no license key, no phone-home, **no email to clone**. Built and maintained by [RedmineShop](https://redmineshop.com). Pro (SAML 2.0, multi-IdP, group/role sync, audit logging) is planned after the public trust gate; Community features never move behind a paywall.
+Community edition is **free forever** — no license key, no phone-home, **no email to clone**. Built and maintained by [RedmineShop](https://redmineshop.com). Pro (planned) adds SAML 2.0, multi-IdP, group/role sync, and audit logging. Community features never move behind a paywall.
 
 ## Why teams choose this Redmine OIDC plugin
 

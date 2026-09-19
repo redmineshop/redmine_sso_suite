@@ -8,9 +8,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ### Changed
 
-- Community install is **GitHub-first** (`git clone https://github.com/redmineshop/redmine_sso_suite.git`). Email-funnel packages are no longer the documented download path.
-- README rewritten for the public GitHub mirror: no email lead capture, honest verified vs declared quality-harness table.
-- README: **Last maintained** 2026-09-18, embed all four harness screenshots, and public-safe harness wording (no clickable private-monorepo URLs).
+- Install docs use `git clone https://github.com/redmineshop/redmine_sso_suite.git` (no email form).
+- README lists Last maintained, screenshots, and what is verified vs untested.
 
 ### Added
 
@@ -22,12 +21,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [1.0.0] — 2026-07-18
 
-Sprint 2.4 — Community GA (OIDC).
+Community GA (OIDC).
 
 ### Added
 
 - GA release packaging via RedmineShop email funnel (signed URL + SHA256)
-- Compatibility matrix documentation for GA gate (`demo/docs/qa-matrix-ga.md`)
+- Compatibility notes for the 1.0.0 release
 
 ### Changed
 
@@ -43,7 +42,7 @@ Sprint 2.4 — Community GA (OIDC).
 
 ## [0.9.0-beta] — 2026-07-16
 
-Sprint 2.3 — beta release with validated settings UI and email-gated download funnel.
+Beta release with validated settings UI.
 
 ### Added
 
@@ -56,14 +55,14 @@ Sprint 2.3 — beta release with validated settings UI and email-gated download 
 
 ### Notes
 
-- QA round 1: Redmine 6.x + MySQL 8 PASS (demo stack); PostgreSQL 16 and Redmine 5.1.x cells scheduled for Sprint 2.4 GA gate
+- QA: Redmine 6.x + MySQL 8 PASS; PostgreSQL 16 and Redmine 5.1.x cells were still untested at this tag
 - Official package distributed via RedmineShop email funnel with signed URL (72h) and SHA256 checksum
 
 [0.9.0-beta]: https://github.com/redmineshop/redmine_sso_suite/releases/tag/v0.9.0-beta
 
 ## [0.1.0-alpha] — 2026-07-15
 
-Sprint 2.2 walking skeleton — OIDC login with Keycloak local dev stack.
+OIDC login with a local Keycloak stack.
 
 ### Fixed
 
@@ -88,7 +87,7 @@ Sprint 2.2 walking skeleton — OIDC login with Keycloak local dev stack.
 
 ### Notes
 
-- SAML, multi-IdP, group sync, and audit log are **Pro** scope (post trust gate)
+- SAML, multi-IdP, group sync, and audit log are **Pro** (planned)
 - Settings UI is functional but minimal — full admin UX ships in v0.9.0-beta
 
 [0.1.0-alpha]: https://github.com/redmineshop/redmine_sso_suite/releases/tag/v0.1.0-alpha
