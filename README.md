@@ -2,8 +2,9 @@
 
 [![Community · Free forever](https://img.shields.io/badge/Community-Free%20forever-brightgreen)](https://redmineshop.com/products/redmine-sso-suite)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+[![CI](https://github.com/redmineshop/redmine_sso_suite/actions/workflows/ci.yml/badge.svg)](https://github.com/redmineshop/redmine_sso_suite/actions/workflows/ci.yml)
 
-**Last maintained:** 2026-09-17
+**Last maintained:** 2026-09-18
 
 **Source on GitHub:** [github.com/redmineshop/redmine_sso_suite](https://github.com/redmineshop/redmine_sso_suite)
 
@@ -106,11 +107,17 @@ Do not treat catalog versions as tested cells. The demo quality harness is **one
 
 ## Screenshot
 
-Administration → Plugins → Configure (OIDC settings) on demo Redmine (plugin quality harness):
+OIDC settings, login SSO button, Keycloak authorize start, and the Administration → Plugins row (demo Redmine):
 
 ![OIDC plugin settings](screenshots/plugin-settings.png)
 
-Login page SSO button and Keycloak authorization start: [screenshots/login-sso-button.png](screenshots/login-sso-button.png), [screenshots/keycloak-login.png](screenshots/keycloak-login.png). Plugin row: [screenshots/admin-plugins.png](screenshots/admin-plugins.png).
+![Sign in with SSO on the Redmine login page](screenshots/login-sso-button.png)
+
+![Keycloak authorization after SSO](screenshots/keycloak-login.png)
+
+![SSO Suite listed under Administration → Plugins](screenshots/admin-plugins.png)
+
+Screenshot refresh lives in the private `redmineshop/redmineshop` harness. A public clone cannot run it.
 
 ## Tests
 
@@ -126,23 +133,23 @@ Public sibling CI (`.github/workflows/ci.yml`) is Ruby syntax only (`ruby -c`). 
 
 ### Quality harness (demo + E2E)
 
-Verified on the RedmineShop **monorepo** demo stack (`docker-compose.demo.yml` + Keycloak). This public GitHub repo is the plugin only — it does not ship that compose file.
+E2E lives in the **private** `redmineshop/redmineshop` harness (`docker-compose.demo.yml` + Keycloak + Playwright). This public GitHub repo is the plugin only — it does not ship that compose file, and a public clone cannot open private harness docs.
+
+Install and smoke this plugin on your own Redmine: [SSO install](https://redmineshop.com/docs/sso-install).
 
 | Bar | Status |
 | --- | --- |
 | Automated tests beyond `ruby -c` | **Verified** — `test/unit` + `test/functional` in this repo (Playwright is a separate row) |
-| Installed + enabled on demo Redmine | **Verified** — mounted via `demo/plugins/` on the monorepo demo stack; seed applies OIDC settings and waits for Keycloak discovery |
-| E2E primary happy path | **Verified** — Playwright `demo/e2e/tests/redmine_sso_suite.spec.js` (Configure page, key fields, login SSO button, redirect to Keycloak authorize URL). **Not verified:** full OIDC callback + JIT user creation in the browser |
+| Installed + enabled on demo Redmine | **Verified** — mounted via `demo/plugins/` on the private monorepo demo stack; seed applies OIDC settings and waits for Keycloak discovery |
+| E2E primary happy path | **Verified** — Playwright on that private harness (Configure page, key fields, login SSO button, redirect to Keycloak authorize URL). **Not verified:** full OIDC callback + JIT user creation in the browser |
 | UI screenshot in README | **Verified** — `screenshots/{admin-plugins,plugin-settings,login-sso-button,keycloak-login}.png` from that spec |
 | Redmine 5.1 / 6.x matrix | **Declared / untested** — this harness is one demo image, not a QA matrix |
 
-How to run (monorepo, not this public repo): [plugin quality harness](https://github.com/redmineshop/redmineshop/blob/main/docs/plugin-quality-harness.md).
+## Local Keycloak demo (private harness)
 
-## Local Keycloak demo (RedmineShop monorepo only)
+This GitHub repository is **the plugin**. The Keycloak + Redmine demo stack lives in the **private** `redmineshop/redmineshop` harness (`docker-compose.demo.yml`). It is not part of a `git clone` of this repo.
 
-This GitHub repository is **the plugin**. The Keycloak + Redmine demo stack lives in the [RedmineShop monorepo](https://github.com/redmineshop/redmineshop) (`docker-compose.demo.yml`, `demo/scripts/configure-sso-dev.sh`). It is not part of a `git clone` of this repo.
-
-On that monorepo, after the demo stack is up: demo Redmine `http://localhost:8090`, Keycloak `http://localhost:8190` (admin / admin), test user `sso.test` / `sso-test-password`. Walkthrough: [sso-keycloak.md](https://github.com/redmineshop/redmineshop/blob/main/demo/docs/sso-keycloak.md).
+Playwright there covers the login-page SSO button and redirect to the IdP authorize URL. Full OIDC callback + JIT in the browser is **not** in that E2E (MiniTest stubs cover that path).
 
 ## License
 

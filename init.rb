@@ -8,6 +8,8 @@ require_relative 'lib/redmine_sso_suite/oidc_client'
 require_relative 'lib/redmine_sso_suite/user_provisioner'
 require_relative 'lib/redmine_sso_suite/hooks'
 require_relative 'lib/redmine_sso_suite/account_controller_patch'
+require_relative 'lib/redmine_sso_suite/settings_validator'
+require_relative 'lib/redmine_sso_suite/settings_controller_patch'
 require_relative 'lib/redmine_sso_suite/demo_env_config'
 
 Redmine::Plugin.register :redmine_sso_suite do
@@ -37,4 +39,8 @@ end
 # prepare cycle, and on each dev reload this file is reloaded and re-run.
 unless AccountController.ancestors.include?(RedmineSsoSuite::AccountControllerPatch)
   AccountController.prepend(RedmineSsoSuite::AccountControllerPatch)
+end
+
+unless SettingsController.ancestors.include?(RedmineSsoSuite::SettingsControllerPatch)
+  SettingsController.prepend(RedmineSsoSuite::SettingsControllerPatch)
 end

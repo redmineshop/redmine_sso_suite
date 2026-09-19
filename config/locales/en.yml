@@ -31,3 +31,9 @@ en:
   error_sso_inactive_user: Your SSO account is not active in Redmine.
   error_sso_login_failed: "SSO login failed: %{message}"
   error_sso_user_not_found: No matching Redmine user and JIT provisioning is disabled.
+  error_sso_issuer_url_required: Issuer URL is required when SSO is enabled.
+  error_sso_client_id_required: Client ID is required when SSO is enabled.
+  error_sso_issuer_url_invalid: Issuer URL must be a valid http or https URL.
+  error_sso_public_issuer_url_invalid: Public issuer URL must be a valid http or https URL.
+  error_sso_scopes_invalid: Scopes may only contain letters, numbers, spaces, dots, and hyphens.
+  error_sso_claim_invalid: "Invalid %{claim} claim name — use OIDC claim identifiers only."

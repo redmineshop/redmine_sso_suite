@@ -4,6 +4,63 @@ All notable changes to **redmine_sso_suite** (Community OIDC plugin).
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Community install is **GitHub-first** (`git clone https://github.com/redmineshop/redmine_sso_suite.git`). Email-funnel packages are no longer the documented download path.
+- README rewritten for the public GitHub mirror: no email lead capture, honest verified vs declared quality-harness table.
+- README: **Last maintained** 2026-09-18, embed all four harness screenshots, and public-safe harness wording (no clickable private-monorepo URLs).
+
+### Added
+
+- Plugin quality harness on the RedmineShop demo stack: Playwright E2E for the Configure page, SSO login button, and Keycloak authorization start, plus README screenshots.
+
+### Notes
+
+- Full OIDC callback + JIT login in a browser is **not** in this E2E (MiniTest stubs cover that path). Do not treat the harness as a Redmine 5.1 / 6.x matrix.
+
+## [1.0.0] — 2026-07-18
+
+Sprint 2.4 — Community GA (OIDC).
+
+### Added
+
+- GA release packaging via RedmineShop email funnel (signed URL + SHA256)
+- Compatibility matrix documentation for GA gate (`demo/docs/qa-matrix-ga.md`)
+
+### Changed
+
+- Version bump 0.9.0-beta → 1.0.0
+- README and storefront product copy updated for GA (OIDC Community; SAML remains Pro planned)
+
+### Compatibility
+
+- Tested: Redmine 6.x | MySQL 8 (demo stack) — see QA matrix for additional cells
+- Targets: Redmine 5.1.x | PostgreSQL 16
+
+[1.0.0]: https://github.com/redmineshop/redmine_sso_suite/releases/tag/v1.0.0
+
+## [0.9.0-beta] — 2026-07-16
+
+Sprint 2.3 — beta release with validated settings UI and email-gated download funnel.
+
+### Added
+
+- Settings validation on save — issuer URL format, required fields when enabled, scope and claim name checks
+- Improved admin settings labels and validation error messages (en locale)
+
+### Changed
+
+- Version bump to beta; README and install docs updated for storefront funnel
+
+### Notes
+
+- QA round 1: Redmine 6.x + MySQL 8 PASS (demo stack); PostgreSQL 16 and Redmine 5.1.x cells scheduled for Sprint 2.4 GA gate
+- Official package distributed via RedmineShop email funnel with signed URL (72h) and SHA256 checksum
+
+[0.9.0-beta]: https://github.com/redmineshop/redmine_sso_suite/releases/tag/v0.9.0-beta
+
 ## [0.1.0-alpha] — 2026-07-15
 
 Sprint 2.2 walking skeleton — OIDC login with Keycloak local dev stack.
