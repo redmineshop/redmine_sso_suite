@@ -44,4 +44,12 @@ class RedmineSsoSuite::AccountControllerPatchTest < ActionController::TestCase
 
     assert_equal 2, session[:user_id]
   end
+
+  test 'blocks password login for an unknown login when enforced' do
+    post :login, params: { username: 'does-not-exist', password: 'whatever' }
+
+    assert_response :success
+    assert_nil session[:user_id]
+    assert_select 'div.flash.error'
+  end
 end

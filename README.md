@@ -4,7 +4,7 @@
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![CI](https://github.com/redmineshop/redmine_sso_suite/actions/workflows/ci.yml/badge.svg)](https://github.com/redmineshop/redmine_sso_suite/actions/workflows/ci.yml)
 
-**Last maintained:** 2026-09-19
+**Last maintained:** 2026-09-21
 
 **Source on GitHub:** [github.com/redmineshop/redmine_sso_suite](https://github.com/redmineshop/redmine_sso_suite)
 
@@ -33,11 +33,13 @@ Single sign-on is the kind of feature where a subtle bug becomes a full account-
 
 | Protection | What it prevents |
 | --- | --- |
-| `back_url` validated with Redmine's own `validate_back_url` | Open redirect (CWE-601) via a crafted `/sso/login?back_url=...` link |
+| `back_url` validated with Redmine's own `validate_back_url` (store and use) | Open redirect (CWE-601) via a crafted `/sso/login?back_url=...` link or a tampered session value |
 | "Enforce SSO for non-admin" blocks `AccountController#password_authentication` server-side | Bypassing the SSO requirement with a direct `POST /login` once the UI toggle is hidden |
 | `email` claim only trusted when the IdP marks it `email_verified` | Account takeover by claiming another user's email on IdPs that allow self-declared/unverified emails |
-| ID token `iss` / `aud` / `exp` validated on every login | Tokens issued for a different issuer, a different OAuth client, or already expired |
+| ID token `iss` / `aud` / `exp` required (fail closed) and checked on every login | Tokens that omit registered claims, or that were issued for a different issuer, a different OAuth client, or already expired |
+| ID token RS256 signature checked when discovery exposes `jwks_uri` | Accepting an unsigned or wrong-key JWT as an ID token |
 | OAuth `state` compared with `ActiveSupport::SecurityUtils.secure_compare` | CSRF on the OIDC callback and timing side-channels on the comparison |
+| IdP / token errors logged server-side, generic flash on the login page | Reflected XSS or token-endpoint bodies shown to the browser |
 
 Full history in [CHANGELOG.md](CHANGELOG.md). Found a security issue? Please report it privately — see [Support](#support--links) — instead of opening a public GitHub issue.
 
@@ -127,7 +129,7 @@ Unit + functional tests live under `test/` (MiniTest). Run them from a Redmine t
 bundle exec rake redmine:plugins:test NAME=redmine_sso_suite RAILS_ENV=test
 ```
 
-They cover the OIDC client (PKCE, discovery, token/claim validation), JIT provisioning (including the `email_verified` guard), the OAuth callback (state validation, session establishment), and the server-side SSO enforcement patch. Token exchange is **stubbed** — they do not require a live IdP.
+They cover the OIDC client (PKCE, discovery, token/claim validation, fail-closed `iss`/`aud`/`exp`, RS256/JWKS when configured), JIT provisioning (including the `email_verified` guard and non-admin create), the OAuth callback (state validation, session establishment, sanitized IdP errors, tampered `back_url`), and the server-side SSO enforcement patch. Token exchange is **stubbed** in MiniTest — they do not require a live IdP.
 
 Public sibling CI (`.github/workflows/ci.yml`) is Ruby syntax only (`ruby -c`). That is not the quality bar.
 
@@ -141,7 +143,7 @@ Install and smoke this plugin on your own Redmine: [SSO install](https://redmine
 | --- | --- |
 | Automated tests beyond `ruby -c` | **Verified** — `test/unit` + `test/functional` in this repo (Playwright is a separate row) |
 | Installed + enabled on demo Redmine | **Verified** — mounted via `demo/plugins/` on the private monorepo demo stack; seed applies OIDC settings and waits for Keycloak discovery |
-| E2E primary happy path | **Verified** — Playwright on that private harness (Configure page, key fields, login SSO button, redirect to Keycloak authorize URL). **Not verified:** full OIDC callback + JIT user creation in the browser |
+| E2E primary happy path | **Verified** — Playwright on that private harness (Configure page, key fields, login SSO button, Keycloak authorize, callback, Redmine session, JIT user `sso.test`) |
 | UI screenshot in README | **Verified** — `screenshots/{admin-plugins,plugin-settings,login-sso-button,keycloak-login}.png` from that spec |
 | Redmine 5.1 / 6.x matrix | **Declared / untested** — this harness is one demo image, not a QA matrix |
 
@@ -149,7 +151,7 @@ Install and smoke this plugin on your own Redmine: [SSO install](https://redmine
 
 This GitHub repository is **the plugin**. The Keycloak + Redmine demo stack lives in the **private** `redmineshop/redmineshop` harness (`docker-compose.demo.yml`). It is not part of a `git clone` of this repo.
 
-Playwright there covers the login-page SSO button and redirect to the IdP authorize URL. Full OIDC callback + JIT in the browser is **not** in that E2E (MiniTest stubs cover that path).
+Playwright there completes the OIDC happy path: SSO button → Keycloak login (`sso.test`) → callback → Redmine session → JIT account. The harness seed sets `Setting.host_name` from `DEMO_URL` (`http://127.0.0.1:8090`) so the OAuth redirect URI and the Playwright cookie host match. MiniTest still stubs token exchange for the cases that do not need a live IdP.
 
 ## License
 

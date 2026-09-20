@@ -25,11 +25,12 @@ en:
   label_sso_claim_lastname: Last name claim
   label_sso_callback_url: OAuth redirect URI (register at IdP)
   error_sso_not_configured: SSO is not configured. Contact your Redmine administrator.
-  error_sso_provider: "Identity provider error: %{message}"
+  error_sso_provider: The identity provider rejected this sign-in. Try again or contact your administrator.
+  error_sso_provider_failed: The identity provider rejected this sign-in. Try again or contact your administrator.
   error_sso_state_mismatch: SSO login failed (invalid state). Please try again.
   error_sso_missing_code: SSO login failed (missing authorization code).
   error_sso_inactive_user: Your SSO account is not active in Redmine.
-  error_sso_login_failed: "SSO login failed: %{message}"
+  error_sso_login_failed: SSO login failed. Try again or contact your administrator.
   error_sso_user_not_found: No matching Redmine user and JIT provisioning is disabled.
   error_sso_issuer_url_required: Issuer URL is required when SSO is enabled.
   error_sso_client_id_required: Client ID is required when SSO is enabled.

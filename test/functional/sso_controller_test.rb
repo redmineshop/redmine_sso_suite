@@ -67,6 +67,47 @@ class SsoControllerTest < ActionController::TestCase
     assert_equal '/my/page', session[:sso_back_url]
   end
 
+  test 'login rejects protocol-relative and javascript back_url values' do
+    get :login, params: { back_url: '//evil.example/phish' }
+    refute_equal '//evil.example/phish', session[:sso_back_url]
+    assert_equal '/my/page', session[:sso_back_url]
+
+    get :login, params: { back_url: 'javascript:alert(1)' }
+    refute_equal 'javascript:alert(1)', session[:sso_back_url]
+    assert_equal '/my/page', session[:sso_back_url]
+  end
+
+  test 'callback rejects missing authorization code' do
+    session[:sso_oidc_state] = 'expected'
+    session[:sso_oidc_code_verifier] = 'verifier'
+    get :callback, params: { state: 'expected' }
+    assert_redirected_to '/login'
+    assert_equal I18n.t(:error_sso_missing_code), flash[:error]
+  end
+
+  test 'callback rejects IdP error without reflecting the description' do
+    get :callback, params: { error: 'access_denied', error_description: '<script>alert(1)</script>' }
+    assert_redirected_to '/login'
+    assert_equal I18n.t(:error_sso_provider_failed), flash[:error]
+    refute_includes flash[:error].to_s, '<script>'
+    refute_includes flash[:error].to_s, 'access_denied'
+  end
+
+  test 'callback ignores a tampered session back_url' do
+    user = User.find(1)
+    state = 'callback-state-open-redirect'
+    session[:sso_oidc_state] = state
+    session[:sso_oidc_code_verifier] = 'callback-verifier'
+    session[:sso_back_url] = 'https://evil.example/phish'
+
+    stub_successful_oidc(user) do
+      get :callback, params: { state: state, code: 'auth-code' }
+    end
+
+    assert_redirected_to '/my/page'
+    refute_match(/evil\.example/, @response.redirect_url.to_s)
+  end
+
   test 'callback establishes valid redmine session token' do
     user = User.find(1)
     state = 'callback-state-token'
@@ -95,5 +136,27 @@ class SsoControllerTest < ActionController::TestCase
     assert_redirected_to '/my/page'
     assert_equal user.id, session[:user_id]
     assert User.verify_session_token(session[:user_id], session[:tk])
+  end
+
+  private
+
+  def stub_successful_oidc(user)
+    exchange = lambda do |code:, code_verifier:|
+      { 'access_token' => 'test-token' }
+    end
+    claims = lambda do |token_response|
+      { 'email' => user.mail, 'preferred_username' => user.login }
+    end
+
+    client = RedmineSsoSuite::OidcClient.new
+    client.singleton_class.send(:define_method, :exchange_code, exchange)
+    client.singleton_class.send(:define_method, :claims_from_token_response, claims)
+
+    RedmineSsoSuite::OidcClient.define_singleton_method(:new) { client }
+    begin
+      yield
+    ensure
+      RedmineSsoSuite::OidcClient.singleton_class.remove_method(:new)
+    end
   end
 end

@@ -6,18 +6,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Security
+
+- ID token `iss` / `aud` / `exp` now fail closed when missing (previously skipped).
+- RS256 signatures are verified when OIDC discovery exposes `jwks_uri`.
+- Callback flash messages no longer echo IdP `error_description` or token-endpoint bodies.
+- `back_url` is re-validated at callback time so a tampered session value cannot open-redirect.
+- JIT provisioning sets `admin = false` explicitly.
+
 ### Changed
 
 - Install docs use `git clone https://github.com/redmineshop/redmine_sso_suite.git` (no email form).
 - README lists Last maintained, screenshots, and what is verified vs untested.
+- Private harness Playwright spec completes Keycloak login through callback, session, and JIT user `sso.test`. Callback URL follows `Setting.host_name` (harness seed + compose default `127.0.0.1:8090`) so the redirect URI and Playwright cookie host match.
 
 ### Added
 
-- Plugin quality harness on the RedmineShop demo stack: Playwright E2E for the Configure page, SSO login button, and Keycloak authorization start, plus README screenshots.
+- Plugin quality harness on the RedmineShop demo stack: Playwright E2E for the Configure page, SSO login button, Keycloak authorization, callback, and JIT login, plus README screenshots.
+- MiniTest coverage for missing ID-token claims, JWKS signature accept/reject, `alg=none`, tampered `back_url`, reflected IdP errors, and unknown-login SSO enforcement.
 
 ### Notes
 
-- Full OIDC callback + JIT login in a browser is **not** in this E2E (MiniTest stubs cover that path). Do not treat the harness as a Redmine 5.1 / 6.x matrix.
+- Do not treat the harness as a Redmine 5.1 / 6.x matrix. JWKS verification runs when discovery includes `jwks_uri`; MiniTest cases without it still stub token exchange.
 
 ## [1.0.0] — 2026-07-18
 

@@ -27,7 +27,8 @@ class SsoController < ApplicationController
 
   def callback
     if params[:error].present?
-      flash[:error] = I18n.t(:error_sso_provider, message: params[:error_description].presence || params[:error])
+      logger.warn("[redmine_sso_suite] IdP error=#{params[:error].to_s.truncate(64)}")
+      flash[:error] = I18n.t(:error_sso_provider_failed)
       return redirect_to signin_path
     end
 
@@ -40,7 +41,8 @@ class SsoController < ApplicationController
 
     code_verifier = session.delete(:sso_oidc_code_verifier)
     session.delete(:sso_oidc_state)
-    back_url = session.delete(:sso_back_url) || my_page_path
+    # Re-validate at use time so a tampered session value cannot open-redirect.
+    back_url = validate_back_url(session.delete(:sso_back_url).to_s) || my_page_path
 
     unless params[:code].present? && code_verifier.present?
       flash[:error] = I18n.t(:error_sso_missing_code)
@@ -62,7 +64,7 @@ class SsoController < ApplicationController
     redirect_to back_url
   rescue RedmineSsoSuite::OidcClient::Error, RedmineSsoSuite::UserProvisioner::Error => e
     logger.error("[redmine_sso_suite] #{e.class}: #{e.message}")
-    flash[:error] = I18n.t(:error_sso_login_failed, message: e.message)
+    flash[:error] = I18n.t(:error_sso_login_failed)
     redirect_to signin_path
   end
 

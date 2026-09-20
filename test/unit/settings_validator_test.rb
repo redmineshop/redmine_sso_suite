@@ -27,6 +27,17 @@ class RedmineSsoSuite::SettingsValidatorTest < ActiveSupport::TestCase
     assert errors.any?
   end
 
+  test 'rejects javascript and data issuer urls' do
+    %w[javascript:alert(1) data:text/html,phish].each do |issuer|
+      errors = RedmineSsoSuite::SettingsValidator.validate(
+        'enabled' => '1',
+        'issuer_url' => issuer,
+        'client_id' => 'redmine-oidc'
+      )
+      assert errors.any?, "expected rejection of #{issuer}"
+    end
+  end
+
   test 'accepts valid enabled settings' do
     errors = RedmineSsoSuite::SettingsValidator.validate(
       'enabled' => '1',

@@ -6,6 +6,7 @@ require 'json'
 require 'securerandom'
 require 'digest'
 require 'base64'
+require 'openssl'
 
 module RedmineSsoSuite
   class OidcClient
@@ -14,9 +15,14 @@ module RedmineSsoSuite
     class TokenError < Error; end
 
     DISCOVERY_CACHE_KEY = 'redmine_sso_suite_oidc_discovery'
+    JWKS_CACHE_KEY = 'redmine_sso_suite_oidc_jwks'
+    # OIDC Core treats a small clock skew as acceptable for exp checks.
+    CLOCK_SKEW_SECONDS = 60
 
-    def initialize(settings: RedmineSsoSuite::Settings)
+    def initialize(settings: RedmineSsoSuite::Settings, discovery: nil, jwks: nil)
       @settings = settings
+      @discovery = discovery
+      @jwks = jwks
     end
 
     def authorization_url(state:, code_verifier:)
@@ -75,6 +81,7 @@ module RedmineSsoSuite
         payload = decode_jwt_payload(token_response['id_token'])
         if payload.is_a?(Hash) && payload['sub'].present?
           validate_id_token_claims!(payload)
+          verify_id_token_signature_if_jwks_available!(token_response['id_token'])
           return payload
         end
       end
@@ -105,8 +112,13 @@ module RedmineSsoSuite
     end
 
     def fetch_discovery
+      return @discovery if @discovery.is_a?(Hash) && @discovery['authorization_endpoint'].present?
+
       cache = Rails.cache.read(DISCOVERY_CACHE_KEY)
-      return cache if cache.is_a?(Hash) && cache['authorization_endpoint'].present?
+      if cache.is_a?(Hash) && cache['authorization_endpoint'].present?
+        @discovery = cache
+        return cache
+      end
 
       issuer = @settings.issuer_for_server
       raise ConfigurationError, 'Issuer URL is not configured' if issuer.blank?
@@ -118,6 +130,7 @@ module RedmineSsoSuite
       end
 
       doc = parse_json(response.body)
+      @discovery = doc
       Rails.cache.write(DISCOVERY_CACHE_KEY, doc, expires_in: 10.minutes)
       doc
     end
@@ -130,26 +143,112 @@ module RedmineSsoSuite
       url.to_s.sub(server_issuer, browser_issuer)
     end
 
-    # Defense-in-depth claim checks (iss/aud/exp) on top of transport-level
-    # trust (the ID token is fetched server-to-server from the token endpoint
-    # over TLS, not received via the browser). Full signature/JWKS
-    # verification is intentionally out of scope for this alpha and should be
-    # added in a follow-up sprint.
+    # Claim checks fail closed: a missing iss/aud/exp is rejected, not skipped.
+    # Transport trust (token endpoint over TLS) is not enough — a crafted
+    # unsigned JWT with blank registered claims used to pass. When discovery
+    # exposes jwks_uri, RS256 signatures are verified as well.
     def validate_id_token_claims!(payload)
       actual_iss = payload['iss'].to_s.chomp('/')
-      if actual_iss.present? && !accepted_issuers.include?(actual_iss)
+      raise TokenError, 'ID token is missing iss' if actual_iss.blank?
+
+      unless accepted_issuers.include?(actual_iss)
         raise TokenError, "ID token issuer mismatch (expected one of #{accepted_issuers.join(', ')}, got #{actual_iss})"
       end
 
-      audience = Array(payload['aud'])
-      if audience.present? && @settings.client_id.present? && !audience.include?(@settings.client_id)
+      audience = Array(payload['aud']).map(&:to_s)
+      raise TokenError, 'ID token is missing aud' if audience.empty?
+      raise TokenError, 'client_id is not configured' if @settings.client_id.blank?
+
+      unless audience.include?(@settings.client_id)
         raise TokenError, 'ID token audience does not match configured client_id'
       end
 
       exp = payload['exp']
-      if exp.present? && Time.now.to_i > exp.to_i
+      raise TokenError, 'ID token is missing exp' if exp.blank?
+
+      if Time.now.to_i > exp.to_i + CLOCK_SKEW_SECONDS
         raise TokenError, 'ID token has expired'
       end
+    end
+
+    def verify_id_token_signature_if_jwks_available!(jwt)
+      discovery = @discovery.is_a?(Hash) ? @discovery : Rails.cache.read(DISCOVERY_CACHE_KEY)
+      return unless discovery.is_a?(Hash) && discovery['jwks_uri'].to_s.present?
+
+      header = decode_jwt_header(jwt)
+      alg = header['alg'].to_s
+      raise TokenError, 'ID token algorithm none is not allowed' if alg.blank? || alg.casecmp('none').zero?
+      raise TokenError, "Unsupported ID token algorithm #{alg}" unless alg == 'RS256'
+
+      jwks = fetch_jwks(discovery['jwks_uri'])
+      keys = Array(jwks['keys'])
+      kid = header['kid'].to_s
+      jwk = if kid.present?
+              keys.find { |key| key['kid'].to_s == kid }
+            else
+              keys.find { |key| key['kty'].to_s == 'RSA' }
+            end
+      raise TokenError, 'No matching JWKS key for ID token' if jwk.blank?
+
+      verify_rs256!(jwt, jwk)
+    end
+
+    def fetch_jwks(jwks_uri)
+      return @jwks if @jwks.is_a?(Hash) && @jwks['keys'].is_a?(Array)
+
+      cached = Rails.cache.read(JWKS_CACHE_KEY)
+      return cached if cached.is_a?(Hash) && cached['keys'].is_a?(Array)
+
+      response = get(jwks_uri)
+      unless response.is_a?(Net::HTTPSuccess)
+        raise TokenError, "JWKS fetch failed (#{response.code})"
+      end
+
+      doc = parse_json(response.body)
+      unless doc.is_a?(Hash) && doc['keys'].is_a?(Array)
+        raise TokenError, 'JWKS document is invalid'
+      end
+
+      Rails.cache.write(JWKS_CACHE_KEY, doc, expires_in: 10.minutes)
+      doc
+    end
+
+    def verify_rs256!(jwt, jwk)
+      parts = jwt.to_s.split('.')
+      raise TokenError, 'ID token is malformed' unless parts.length == 3
+
+      signed_data = "#{parts[0]}.#{parts[1]}"
+      signature = base64url_decode(parts[2])
+      key = rsa_public_key_from_jwk(jwk)
+      unless key.verify(OpenSSL::Digest::SHA256.new, signature, signed_data)
+        raise TokenError, 'ID token signature is invalid'
+      end
+    end
+
+    def rsa_public_key_from_jwk(jwk)
+      n = OpenSSL::BN.new(base64url_decode(jwk['n']), 2)
+      e = OpenSSL::BN.new(base64url_decode(jwk['e']), 2)
+      # OpenSSL 3 keys are immutable — build a SubjectPublicKeyInfo DER.
+      sequence = OpenSSL::ASN1::Sequence([
+        OpenSSL::ASN1::Integer(n),
+        OpenSSL::ASN1::Integer(e)
+      ])
+      OpenSSL::PKey::RSA.new(sequence.to_der)
+    end
+
+    def decode_jwt_header(jwt)
+      parts = jwt.to_s.split('.')
+      return {} unless parts.length >= 2
+
+      JSON.parse(base64url_decode(parts[0]))
+    rescue JSON::ParserError, ArgumentError
+      {}
+    end
+
+    def base64url_decode(value)
+      payload = value.to_s
+      padded = payload + ('=' * ((4 - payload.length % 4) % 4))
+      Base64.urlsafe_decode64(padded)
     end
 
     # The IdP issues tokens with `iss` matching whichever hostname the
@@ -169,9 +268,7 @@ module RedmineSsoSuite
       parts = jwt.to_s.split('.')
       return {} unless parts.length >= 2
 
-      payload = parts[1]
-      padded = payload + ('=' * ((4 - payload.length % 4) % 4))
-      JSON.parse(Base64.urlsafe_decode64(padded))
+      JSON.parse(base64url_decode(parts[1]))
     rescue JSON::ParserError, ArgumentError
       {}
     end
@@ -205,7 +302,8 @@ module RedmineSsoSuite
       end
 
       unless response.is_a?(Net::HTTPSuccess)
-        raise TokenError, "Token endpoint returned #{response.code}: #{response.body.to_s.truncate(200)}"
+        Rails.logger.error("[redmine_sso_suite] Token endpoint returned #{response.code}")
+        raise TokenError, "Token endpoint returned #{response.code}"
       end
 
       response

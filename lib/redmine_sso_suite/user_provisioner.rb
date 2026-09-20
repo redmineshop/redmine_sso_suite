@@ -82,6 +82,7 @@ module RedmineSsoSuite
       user.lastname = attrs[:lastname]
       user.mail = attrs[:mail]
       user.language = Setting.default_language
+      user.admin = false
       user.must_change_passwd = false
       user.random_password
       user.save!

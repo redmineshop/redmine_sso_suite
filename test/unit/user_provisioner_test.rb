@@ -35,6 +35,7 @@ class RedmineSsoSuite::UserProvisionerTest < ActiveSupport::TestCase
     assert user.persisted?
     assert_equal claims['email'], user.mail
     assert_equal claims['preferred_username'], user.login
+    refute user.admin?, 'JIT must never create an administrator'
   end
 
   test 'finds existing user by email' do

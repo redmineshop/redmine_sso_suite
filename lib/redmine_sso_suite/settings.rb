@@ -54,12 +54,21 @@ module RedmineSsoSuite
     end
 
     def redmine_base_url
+      # Prefer Redmine's persisted host. The harness seed may set this to
+      # 127.0.0.1:8090 so the OAuth redirect URI shares a cookie host with
+      # Playwright (compose ENV is often localhost:8090).
+      host = Setting.host_name.to_s.strip
+      if host.present?
+        protocol = Setting.protocol.to_s.strip
+        protocol = ENV.fetch('REDMINE_PUBLIC_PROTOCOL', 'http') if protocol.blank?
+        return "#{protocol}://#{host}"
+      end
+
       if ENV['REDMINE_PUBLIC_HOST'].present?
         protocol = ENV.fetch('REDMINE_PUBLIC_PROTOCOL', 'http')
         return "#{protocol}://#{ENV['REDMINE_PUBLIC_HOST']}"
       end
 
-      host = Setting.host_name.to_s
       protocol = Setting.protocol || 'http'
       "#{protocol}://#{host}"
     end

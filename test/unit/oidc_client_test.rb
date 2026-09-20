@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'openssl'
 require File.expand_path('../test_helper', __dir__)
 
 class RedmineSsoSuite::OidcClientTest < ActiveSupport::TestCase
@@ -14,11 +15,13 @@ class RedmineSsoSuite::OidcClientTest < ActiveSupport::TestCase
       'scopes' => 'openid profile email'
     }
     Rails.cache.delete(RedmineSsoSuite::OidcClient::DISCOVERY_CACHE_KEY)
+    Rails.cache.delete(RedmineSsoSuite::OidcClient::JWKS_CACHE_KEY)
   end
 
   def teardown
     Setting.plugin_redmine_sso_suite = @original
     Rails.cache.delete(RedmineSsoSuite::OidcClient::DISCOVERY_CACHE_KEY)
+    Rails.cache.delete(RedmineSsoSuite::OidcClient::JWKS_CACHE_KEY)
   end
 
   def test_code_challenge_s256
@@ -131,11 +134,138 @@ class RedmineSsoSuite::OidcClientTest < ActiveSupport::TestCase
     end
   end
 
+  def test_claims_from_token_response_rejects_missing_iss
+    client = RedmineSsoSuite::OidcClient.new
+    jwt = build_jwt(
+      'sub' => 'abc',
+      'aud' => 'redmine-oidc',
+      'exp' => 5.minutes.from_now.to_i
+    )
+
+    error = assert_raises RedmineSsoSuite::OidcClient::TokenError do
+      client.claims_from_token_response('id_token' => jwt)
+    end
+    assert_match(/iss/, error.message)
+  end
+
+  def test_claims_from_token_response_rejects_missing_aud
+    client = RedmineSsoSuite::OidcClient.new
+    jwt = build_jwt(
+      'sub' => 'abc',
+      'iss' => 'http://demo-keycloak:8080/realms/redmineshop-dev',
+      'exp' => 5.minutes.from_now.to_i
+    )
+
+    error = assert_raises RedmineSsoSuite::OidcClient::TokenError do
+      client.claims_from_token_response('id_token' => jwt)
+    end
+    assert_match(/aud/, error.message)
+  end
+
+  def test_claims_from_token_response_rejects_missing_exp
+    client = RedmineSsoSuite::OidcClient.new
+    jwt = build_jwt(
+      'sub' => 'abc',
+      'iss' => 'http://demo-keycloak:8080/realms/redmineshop-dev',
+      'aud' => 'redmine-oidc'
+    )
+
+    error = assert_raises RedmineSsoSuite::OidcClient::TokenError do
+      client.claims_from_token_response('id_token' => jwt)
+    end
+    assert_match(/exp/, error.message)
+  end
+
+  def test_claims_from_token_response_verifies_rs256_when_jwks_present
+    rsa = OpenSSL::PKey::RSA.generate(2048)
+    jwk = rsa_to_jwk(rsa, 'test-key')
+    client = client_with_jwks(jwk)
+
+    jwt = sign_jwt(
+      rsa,
+      {
+        'sub' => 'abc',
+        'email' => 'user@example.com',
+        'iss' => 'http://demo-keycloak:8080/realms/redmineshop-dev',
+        'aud' => 'redmine-oidc',
+        'exp' => 5.minutes.from_now.to_i
+      },
+      'test-key'
+    )
+
+    claims = client.claims_from_token_response('id_token' => jwt)
+    assert_equal 'user@example.com', claims['email']
+  end
+
+  def test_claims_from_token_response_rejects_invalid_signature_when_jwks_present
+    rsa = OpenSSL::PKey::RSA.generate(2048)
+    other = OpenSSL::PKey::RSA.generate(2048)
+    client = client_with_jwks(rsa_to_jwk(rsa, 'test-key'))
+
+    jwt = sign_jwt(
+      other,
+      {
+        'sub' => 'abc',
+        'iss' => 'http://demo-keycloak:8080/realms/redmineshop-dev',
+        'aud' => 'redmine-oidc',
+        'exp' => 5.minutes.from_now.to_i
+      },
+      'test-key'
+    )
+
+    assert_raises RedmineSsoSuite::OidcClient::TokenError do
+      client.claims_from_token_response('id_token' => jwt)
+    end
+  end
+
+  def test_claims_from_token_response_rejects_alg_none_when_jwks_present
+    rsa = OpenSSL::PKey::RSA.generate(2048)
+    client = client_with_jwks(rsa_to_jwk(rsa, 'test-key'))
+    jwt = build_jwt(
+      {
+        'sub' => 'abc',
+        'iss' => 'http://demo-keycloak:8080/realms/redmineshop-dev',
+        'aud' => 'redmine-oidc',
+        'exp' => 5.minutes.from_now.to_i
+      },
+      'none'
+    )
+
+    error = assert_raises RedmineSsoSuite::OidcClient::TokenError do
+      client.claims_from_token_response('id_token' => jwt)
+    end
+    assert_match(/none/i, error.message)
+  end
+
   private
 
-  def build_jwt(payload)
-    header = Base64.urlsafe_encode64({ 'alg' => 'RS256' }.to_json, padding: false)
+  def build_jwt(payload, alg = 'RS256')
+    header = Base64.urlsafe_encode64({ 'alg' => alg }.to_json, padding: false)
     body = Base64.urlsafe_encode64(payload.to_json, padding: false)
     "#{header}.#{body}.signature"
+  end
+
+  def sign_jwt(rsa, payload, kid)
+    header = Base64.urlsafe_encode64({ 'alg' => 'RS256', 'kid' => kid }.to_json, padding: false)
+    body = Base64.urlsafe_encode64(payload.to_json, padding: false)
+    signed = "#{header}.#{body}"
+    signature = Base64.urlsafe_encode64(rsa.sign(OpenSSL::Digest::SHA256.new, signed), padding: false)
+    "#{signed}.#{signature}"
+  end
+
+  def rsa_to_jwk(rsa, kid)
+    {
+      'kty' => 'RSA',
+      'kid' => kid,
+      'n' => Base64.urlsafe_encode64(rsa.n.to_s(2), padding: false),
+      'e' => Base64.urlsafe_encode64(rsa.e.to_s(2), padding: false)
+    }
+  end
+
+  def client_with_jwks(jwk)
+    RedmineSsoSuite::OidcClient.new(
+      discovery: { 'jwks_uri' => 'http://demo-keycloak:8080/jwks' },
+      jwks: { 'keys' => [jwk] }
+    )
   end
 end
