@@ -1,10 +1,15 @@
 # Screenshots — Redmine SSO Suite
 
-Crops from a demo Redmine with Keycloak. The Redmine version in the capture was not recorded. A full-page screenshot is still TODO.
+Captured by Playwright against demo Redmine + Keycloak (viewport 1440×900, deviceScaleFactor 1, full page).
 
-- `admin-plugins.png` — Administration → Plugins row with Configure
-- `plugin-settings.png` — OIDC settings (issuer, client, JIT, enforce SSO)
-- `login-sso-button.png` — “Sign in with SSO” on the Redmine login page
-- `keycloak-login.png` — Keycloak authorization form after clicking SSO
+Refresh is **private-monorepo only** (`redmineshop/redmineshop` harness). A public clone of this plugin cannot run that job.
 
-These files do not prove a specific Redmine 5.0 / 5.1 / 6.0 / 6.1 / 7.0 cell. See the compatibility table in the README.
+Output:
+
+- `login-sso.png` — Redmine login page with “Sign in with SSO” (`login-sso-button.png` is the same image)
+- `admin-oidc.png` — OIDC settings; client secret masked (`plugin-settings.png` is the same image)
+- `break-glass.png` — login page with “Administrator? Sign in with password” and an empty password form
+- `keycloak-login.png` — Keycloak authorization form after clicking SSO (captured before credentials are typed)
+- `admin-plugins.png` — Administration → Plugins
+
+The harness also completes the OIDC callback and JIT-provisions `sso.test`. That step is not a README image.

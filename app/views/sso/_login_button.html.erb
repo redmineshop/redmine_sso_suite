@@ -59,7 +59,10 @@
         if (toggle && form) {
           toggle.addEventListener('click', function (event) {
             event.preventDefault();
-            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            // The form starts hidden via a stylesheet rule, so the inline
+            // style is empty on the first click. Use the computed display.
+            var hidden = window.getComputedStyle(form).display === 'none';
+            form.style.display = hidden ? 'block' : 'none';
           });
         }
       });

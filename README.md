@@ -114,19 +114,28 @@ Administrators can always use the local password form (break-glass), even when *
 
 A 2026-07-18 check recorded Redmine 6.x with MySQL 8 for this plugin. The 6.0 versus 6.1 build was not pinned, so both cells stay unverified.
 
-## Screenshot
+## Screenshots
 
-OIDC settings, login SSO button, Keycloak authorize start, and the Administration → Plugins row (demo Redmine):
+Redmine login page with the password form and the SSO button (demo Redmine):
 
-![OIDC plugin settings](screenshots/plugin-settings.png)
+![Sign in with SSO on the Redmine login page](screenshots/login-sso.png)
 
-![Sign in with SSO on the Redmine login page](screenshots/login-sso-button.png)
+OIDC settings. Issuer and client ID are visible. The client secret is masked.
+
+![OIDC plugin settings with client secret masked](screenshots/admin-oidc.png)
+
+When “Enforce SSO for non-admin” is on, standard users see only the SSO button. An administrator can open the local password form. The fields in this shot are empty.
+
+![Administrator break-glass password login](screenshots/break-glass.png)
+
+Keycloak authorization screen after the SSO button, before any credentials are entered:
 
 ![Keycloak authorization after SSO](screenshots/keycloak-login.png)
 
 ![SSO Suite listed under Administration → Plugins](screenshots/admin-plugins.png)
 
-Images are crops from a demo Redmine with Keycloak. The Redmine version in the capture was not recorded. A full-page screenshot is still TODO.
+Screenshot refresh lives in the private `redmineshop/redmineshop` harness. A public clone cannot run it.
+
 
 ## Tests
 
