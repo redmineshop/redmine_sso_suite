@@ -14,6 +14,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 - `back_url` is re-validated at callback time so a tampered session value cannot open-redirect.
 - JIT provisioning sets `admin = false` explicitly.
 
+### Fixed
+
+- The “Administrator? Sign in with password” link reveals the local login form on the first click. The form is hidden with a stylesheet rule, so the toggle uses the computed display.
+
 ### Changed
 
 - Install docs use `git clone https://github.com/redmineshop/redmine_sso_suite.git` (no email form).
