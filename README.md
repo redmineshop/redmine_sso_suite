@@ -4,7 +4,7 @@
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![CI](https://github.com/redmineshop/redmine_sso_suite/actions/workflows/ci.yml/badge.svg)](https://github.com/redmineshop/redmine_sso_suite/actions/workflows/ci.yml)
 
-**Last maintained:** 2026-09-22
+**Last maintained:** 2026-09-27
 
 **Source on GitHub:** [github.com/redmineshop/redmine_sso_suite](https://github.com/redmineshop/redmine_sso_suite)
 
@@ -47,8 +47,8 @@ Full history in [CHANGELOG.md](CHANGELOG.md). Found a security issue? Please rep
 
 ## Requirements
 
-- Redmine **6.x** (primary target); **5.1.x** targeted — see [compatibility](#compatibility)
-- Ruby 3.x (bundled with the official Redmine Docker image)
+- Redmine **7.0.1** is what public CI runs (official `redmine:7.0.1` image, SQLite, Ruby 4.0.7, Rails 8.1.3.1). **6.x** and **5.1.x** stay targeted — see [compatibility](#compatibility)
+- Ruby 3.x on the 5.1 / 6.x lines; the 7.0.1 image bundles Ruby 4.0.7
 - MySQL 8 or PostgreSQL
 - One OpenID Connect identity provider — Keycloak, Okta, Auth0, Azure Entra ID, Google Workspace, or any OIDC-compliant IdP
 
@@ -102,7 +102,7 @@ Administrators can always use the local password form (break-glass), even when *
 
 ## Compatibility
 
-`init.rb` does not set `requires_redmine`. Declared rows match the Requirements section: 5.1.x and 6.x. Tested means a run pinned to that Redmine line. The demo image is official `redmine:latest` (tag not pinned), so a demo boot is not a pass for a specific row.
+`init.rb` does not set `requires_redmine`. Declared rows match the Requirements section: 5.1.x, 6.x, and 7.0.x. Tested means a run pinned to that Redmine line. Screenshots use official `redmine:latest` (tag not pinned), so a demo boot is not a pass for a specific row. The 7.0.x tested cell is plugin MiniTest on `redmine:7.0.1` with token exchange stubbed — not a live identity provider, and not MySQL or PostgreSQL.
 
 | Redmine | Declared | Tested |
 |---------|----------|--------|
@@ -110,7 +110,7 @@ Administrators can always use the local password form (break-glass), even when *
 | 5.1.x   | Yes      | No — unverified |
 | 6.0.x   | Yes      | No — unverified |
 | 6.1.x   | Yes      | No — unverified |
-| 7.0.x   | No       | No — unverified |
+| 7.0.x   | Yes      | Yes — 2026-09-27, official `redmine:7.0.1` only (SQLite, Ruby 4.0.7, Rails 8.1.3.1) via `test/run-redmine-7.0.1.sh`: 39 runs, 108 assertions, 0 failures, 0 errors, 0 skips. Other 7.0 patch releases were not run. |
 
 A 2026-07-18 check recorded Redmine 6.x with MySQL 8 for this plugin. The 6.0 versus 6.1 build was not pinned, so both cells stay unverified.
 
@@ -145,15 +145,26 @@ Unit + functional tests live under `test/` (MiniTest). Run them from a Redmine t
 bundle exec rake redmine:plugins:test NAME=redmine_sso_suite RAILS_ENV=test
 ```
 
-They cover the OIDC client (PKCE, discovery, token/claim validation, fail-closed `iss`/`aud`/`exp`, RS256/JWKS when configured), JIT provisioning (including the `email_verified` guard and non-admin create), the OAuth callback (state validation, session establishment, sanitized IdP errors, tampered `back_url`), and the server-side SSO enforcement patch. Token exchange is **stubbed** in MiniTest — they do not require a live IdP.
+Public GitHub Actions (`.github/workflows/ci.yml`) runs on `main` and on pull requests:
 
-Public GitHub Actions (`.github/workflows/ci.yml`) runs Ruby syntax checks only (`ruby -c`).
+- `ruby -c` on the plugin's Ruby files
+- `test/run-redmine-7.0.1.sh`, which boots official `redmine:7.0.1` (SQLite) and runs `rake redmine:plugins:test NAME=redmine_sso_suite`
+
+The same script runs locally when Docker is available:
+
+```bash
+bash test/run-redmine-7.0.1.sh
+```
+
+On 2026-09-27 that run finished with 39 runs, 108 assertions, 0 failures, 0 errors, 0 skips (Ruby 4.0.7, Rails 8.1.3.1).
+
+They cover the OIDC client (PKCE, discovery, token/claim validation, fail-closed `iss`/`aud`/`exp`, RS256/JWKS when configured), JIT provisioning (including the `email_verified` guard and non-admin create), the OAuth callback (state validation, session establishment, sanitized IdP errors, tampered `back_url`), and the server-side SSO enforcement patch. Token exchange is **stubbed** in MiniTest — the suite does not call a live identity provider. Login tests that need a discovery document write it into an in-process memory cache. Redmine's test environment uses `:null_store`, which would otherwise drop that write and open a TCP connection to the issuer.
 
 ## Limits
 
 - OpenID Connect only. SAML, more than one identity provider, group or role sync, and an audit export are not included.
 - Administrators keep local password login. Non-admin password login can be blocked when **Enforce SSO for non-admin** is on.
-- MiniTest stubs token exchange. It does not boot Redmine 5.0, 5.1, 6.0, 6.1, or 7.0.
+- MiniTest stubs token exchange. Public CI boots Redmine 7.0.1 (SQLite) only. It does not boot Redmine 5.0, 5.1, 6.0, or 6.1, and it does not run MySQL or PostgreSQL.
 - This repository does not ship a Keycloak demo stack. Install on your own Redmine using the steps above. IdP notes: [SSO install](https://redmineshop.com/docs/sso-install).
 
 ## License
