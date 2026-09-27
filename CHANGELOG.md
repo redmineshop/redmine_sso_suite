@@ -20,6 +20,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ### Changed
 
+- Public CI runs this plugin's MiniTest on official `redmine:7.0.1` (SQLite) in addition to `ruby -c`. Token exchange stays stubbed.
 - Install docs use `git clone https://github.com/redmineshop/redmine_sso_suite.git` (no email form).
 - README lists Last maintained, screenshots, and what is verified vs untested.
 - Private harness Playwright spec completes Keycloak login through callback, session, and JIT user `sso.test`. Callback URL follows `Setting.host_name` (harness seed + compose default `127.0.0.1:8090`) so the redirect URI and Playwright cookie host match.
