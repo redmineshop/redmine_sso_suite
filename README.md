@@ -134,9 +134,6 @@ Keycloak authorization screen after the SSO button, before any credentials are e
 
 ![SSO Suite listed under Administration → Plugins](screenshots/admin-plugins.png)
 
-Screenshot refresh lives in the private `redmineshop/redmineshop` harness. A public clone cannot run it.
-
-
 ## Tests
 
 Unit + functional tests live under `test/` (MiniTest). Run them from a Redmine tree with this plugin in `plugins/redmine_sso_suite`:
